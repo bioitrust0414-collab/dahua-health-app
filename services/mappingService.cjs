@@ -1,8 +1,8 @@
 // services/mappingService.js
 // 對應提案中的 mappingService.ts，現在改用真實的 Supabase client 寫入 patient_mappings。
 
-const { verifyPatient } = require('../api/verify-patient');
-const { supabase } = require('../lib/supabaseClient');
+const { verifyPatient } = require('../api/verify-patient.cjs');
+const { supabase } = require('../lib/supabaseClient.cjs');
 
 async function saveMapping(userId, lisPatientId) {
   const { data, error } = await supabase
