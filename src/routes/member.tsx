@@ -1,5 +1,7 @@
+import { useEffect, useState } from "react";
 import { createFileRoute } from "@tanstack/react-router";
 import { createServerFn } from "@tanstack/react-start";
+import { useQuery } from "@tanstack/react-query";
 
 import {
   Card,
@@ -10,10 +12,15 @@ import {
 } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Separator } from "@/components/ui/separator";
+import {
+  ensureLiffLogin,
+  getLiffIdToken,
+  isLiffConfigured,
+} from "@/lib/liffClient";
 
-// 目前還沒有 Supabase Auth 登入流程，先用固定的測試 profile id 示範
-// 「會員資料 + 報告查詢」怎麼串起來。之後接上登入後，這裡要換成
-// 從 session 拿 auth.uid()，而不是寫死的 id。
+// 還沒有 LIFF ID（等大華官方帳號那邊協調好 LINE Developers 權限、建好 LIFF app
+// 之後才會有）時，先用固定的測試 profile id 示範「會員資料 + 報告查詢」怎麼串起來。
+// 一旦 VITE_LIFF_ID 設定了，畫面會自動改用真實的 LINE 登入使用者。
 const DEMO_PROFILE_ID = "30a85010-9893-4811-8bfc-f7e5d48a3401";
 
 interface ProfileRow {
@@ -39,34 +46,55 @@ interface ReportRow {
   } | null;
 }
 
-const getMemberData = createServerFn({ method: "GET" }).handler(async () => {
-  const { getSupabaseAdmin } = await import("@/lib/supabaseAdmin");
-  const supabase = getSupabaseAdmin();
+const getMemberData = createServerFn({ method: "GET" })
+  .validator((profileId: unknown) => {
+    if (typeof profileId !== "string" || profileId.length === 0) {
+      throw new Error("profileId is required");
+    }
+    return profileId;
+  })
+  .handler(async ({ data: profileId }) => {
+    const { getSupabaseAdmin } = await import("@/lib/supabaseAdmin");
+    const supabase = getSupabaseAdmin();
 
-  const [{ data: profile, error: profileError }, { data: reports, error: reportsError }] =
-    await Promise.all([
-      supabase
-        .from("profiles")
-        .select("*")
-        .eq("id", DEMO_PROFILE_ID)
-        .single()
-        .overrideTypes<ProfileRow>(),
-      supabase
-        .from("reports")
-        .select("*")
-        .eq("profile_id", DEMO_PROFILE_ID)
-        .order("report_date", { ascending: false })
-        .overrideTypes<ReportRow[]>(),
-    ]);
+    const [{ data: profile, error: profileError }, { data: reports, error: reportsError }] =
+      await Promise.all([
+        supabase
+          .from("profiles")
+          .select("*")
+          .eq("id", profileId)
+          .single()
+          .overrideTypes<ProfileRow>(),
+        supabase
+          .from("reports")
+          .select("*")
+          .eq("profile_id", profileId)
+          .order("report_date", { ascending: false })
+          .overrideTypes<ReportRow[]>(),
+      ]);
 
-  if (profileError) throw new Error(profileError.message);
-  if (reportsError) throw new Error(reportsError.message);
+    if (profileError) throw new Error(profileError.message);
+    if (reportsError) throw new Error(reportsError.message);
 
-  return { profile: profile as ProfileRow, reports: (reports ?? []) as ReportRow[] };
-});
+    return { profile: profile as ProfileRow, reports: (reports ?? []) as ReportRow[] };
+  });
+
+// 把 LINE ID token 換成 profileId：伺服器端會呼叫 LINE 驗證這個 token 是真的、
+// 沒有過期、發給我們自己的 channel，而不是相信前端隨便傳一個 LINE user id 上來。
+const verifyLineLogin = createServerFn({ method: "POST" })
+  .validator((idToken: unknown) => {
+    if (typeof idToken !== "string" || idToken.length === 0) {
+      throw new Error("idToken is required");
+    }
+    return idToken;
+  })
+  .handler(async ({ data: idToken }) => {
+    const { upsertProfileForLineUser } = await import("@/lib/lineAuth.server");
+    return upsertProfileForLineUser(idToken);
+  });
 
 export const Route = createFileRoute("/member")({
-  loader: () => getMemberData(),
+  loader: () => getMemberData({ data: DEMO_PROFILE_ID }),
   component: MemberPage,
 });
 
@@ -77,16 +105,68 @@ const genderLabel: Record<string, string> = {
   prefer_not_to_say: "不願透露",
 };
 
+function useLineProfileId(): { profileId: string; source: "demo" | "line"; error: string | null } {
+  const [state, setState] = useState<{ profileId: string; source: "demo" | "line"; error: string | null }>({
+    profileId: DEMO_PROFILE_ID,
+    source: "demo",
+    error: null,
+  });
+
+  useEffect(() => {
+    if (!isLiffConfigured()) return; // stay on the demo profile
+
+    let cancelled = false;
+    (async () => {
+      try {
+        await ensureLiffLogin();
+        const idToken = getLiffIdToken();
+        const { profileId } = await verifyLineLogin({ data: idToken });
+        if (!cancelled) setState({ profileId, source: "line", error: null });
+      } catch (error) {
+        if (!cancelled) {
+          setState((prev) => ({
+            ...prev,
+            error: error instanceof Error ? error.message : "LINE login failed",
+          }));
+        }
+      }
+    })();
+
+    return () => {
+      cancelled = true;
+    };
+  }, []);
+
+  return state;
+}
+
 function MemberPage() {
-  const { profile, reports } = Route.useLoaderData();
+  const demoData = Route.useLoaderData();
+  const { profileId, source, error: liffError } = useLineProfileId();
+
+  // Once LIFF hands us a real profileId, refetch with the real data instead
+  // of the SSR-loaded demo data.
+  const { data } = useQuery({
+    queryKey: ["member-data", profileId],
+    queryFn: () => getMemberData({ data: profileId }),
+    enabled: source === "line",
+    initialData: source === "demo" ? demoData : undefined,
+  });
+
+  const { profile, reports } = data ?? demoData;
 
   return (
     <div className="mx-auto max-w-2xl space-y-6 px-4 py-10">
       <div>
         <h1 className="text-2xl font-bold text-foreground">會員資料 + 報告查詢</h1>
         <p className="mt-1 text-sm text-muted-foreground">
-          Demo 頁面，資料透過 server function 讀取（尚未接登入，先用固定測試帳號）。
+          {source === "line"
+            ? "已透過 LINE 登入。"
+            : "Demo 頁面（尚未設定 LIFF，顯示固定測試帳號）。"}
         </p>
+        {liffError && (
+          <p className="mt-1 text-sm text-destructive">LINE 登入失敗：{liffError}</p>
+        )}
       </div>
 
       <Card>
@@ -112,7 +192,7 @@ function MemberPage() {
           {reports.length === 0 && (
             <p className="text-sm text-muted-foreground">目前沒有報告資料。</p>
           )}
-          {reports.map((report) => (
+          {reports.map((report: ReportRow) => (
             <Card key={report.id}>
               <CardHeader>
                 <div className="flex items-center justify-between">
