@@ -1,13 +1,29 @@
 // services/mappingService.js
-// 對應提案中的 mappingService.ts，先用純 JS + 模擬的 Supabase 寫入（console.log 代替真實 insert）
-// 待資料庫落地方式（新建 vs 沿用 dahua-lab 專案）確認後，把 saveMapping() 換成真的 supabase.from('patient_mappings').insert(...)
+// 對應提案中的 mappingService.ts，現在改用真實的 Supabase client 寫入 patient_mappings。
 
 const { verifyPatient } = require('../api/verify-patient');
+const { supabase } = require('../lib/supabaseClient');
 
 async function saveMapping(userId, lisPatientId) {
-  // TODO: 換成真的 Supabase client
-  console.log(`[mappingService] 模擬寫入 patient_mappings: user_id=${userId}, lis_patient_id=${lisPatientId}, is_verified=true`);
-  return { user_id: userId, lis_patient_id: lisPatientId, is_verified: true };
+  const { data, error } = await supabase
+    .from('patient_mappings')
+    .upsert(
+      {
+        profile_id: userId,
+        lis_patient_id: lisPatientId,
+        is_verified: true,
+        linked_at: new Date().toISOString(),
+      },
+      { onConflict: 'profile_id,lis_patient_id' },
+    )
+    .select()
+    .single();
+
+  if (error) {
+    throw new Error(`[mappingService] Supabase 寫入 patient_mappings 失敗: ${error.message}`);
+  }
+
+  return data;
 }
 
 async function verifyAndLinkPatient(userId, phone, dob) {
@@ -26,4 +42,4 @@ async function verifyAndLinkPatient(userId, phone, dob) {
   };
 }
 
-module.exports = { verifyAndLinkPatient };
+module.exports = { verifyAndLinkPatient, saveMapping };

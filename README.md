@@ -20,14 +20,22 @@ UI/技術骨架沿用自 `dhl1688-vercel`(TanStack Start + React 19 + Tailwind v
 
 - ✅ Mock LIS 模擬伺服器（`mock-lis/server.js`）：模擬診所 LIS 系統的手機＋生日核對，含防暴力破解鎖定機制
 - ✅ 中台驗證 API（`api/verify-patient.js`）：呼叫 LIS，未來正式環境會指向診所內網或加密通道
-- ✅ 勾稽邏輯（`services/mappingService.js`）：目前 Supabase 寫入為模擬（console.log），待資料庫串接後替換
+- ✅ 勾稽邏輯（`services/mappingService.js`）：已改為真實 `@supabase/supabase-js` 寫入（`lib/supabaseClient.js`，用 service role key，繞過 RLS 代表使用者寫入）
+- ✅ 前端 Supabase client（`src/lib/supabaseClient.ts`）：用 anon/publishable key，RLS 限制只能讀寫自己的資料
 - ✅ 模擬測試（`test/run-simulation.js`）：驗證成功／查無資料／鎖定三種情境，`node test/run-simulation.js` 可直接跑
-- ⏳ 尚未串接：真實 Supabase client、真實 LIS 系統（尚無 API 或需向廠商確認）、簡訊 OTP 模組
+- ⏳ 尚未串接：真實 LIS 系統（尚無 API 或需向廠商確認）、簡訊 OTP 模組、UI 畫面
 
 ## 資料庫
 
-`db/schema.sql` 沿用現有 Supabase 專案 `dahua-lab`（Tokyo region），新增 4 張表：
-`patient_mappings`、`reports`、`daily_logs`、`reminders`，並以 `profiles(id)` 取代原提案的獨立 `users` 表。
+Supabase 專案 `dahua-lab`（project ref `bpwtllljnwlgdhfepwtr`，ap-southeast-1，2026-07-25 新建）已套用：
+- `profiles`(id/email，auth.users 新註冊會自動建檔的 trigger)
+- `patient_mappings`、`reports`、`daily_logs`、`reminders`（皆已開 RLS，只能讀寫自己的資料）
+
+> 注意：這是全新的空專案，跟先前規劃文件中提到、已有 bookings/orders 等資料的舊 `dahua-lab`（Tokyo region）不是同一個。確認為刻意選擇後才建立。
+
+## 環境變數
+
+複製 `.env.example` 為 `.env`，`SUPABASE_SERVICE_ROLE_KEY` 需自行從 Supabase 後台 Settings > API 取得（不可提交進 repo）。
 
 ## 執行模擬測試
 
