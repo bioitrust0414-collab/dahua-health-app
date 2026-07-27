@@ -81,7 +81,11 @@ const verifyLineLogin = createServerFn({ method: "POST" })
   });
 
 export const Route = createFileRoute("/member")({
-  loader: () => getMemberData({ data: DEMO_PROFILE_ID }),
+  validateSearch: (search: Record<string, unknown>) => ({
+    profileId: typeof search.profileId === "string" ? search.profileId : undefined,
+  }),
+  loaderDeps: ({ search }) => ({ profileId: search.profileId }),
+  loader: ({ deps }) => getMemberData({ data: deps.profileId ?? DEMO_PROFILE_ID }),
   component: MemberPage,
 });
 
@@ -92,14 +96,21 @@ const genderLabel: Record<string, string> = {
   prefer_not_to_say: "不願透露",
 };
 
-function useLineProfileId(): { profileId: string; source: "demo" | "line"; error: string | null } {
-  const [state, setState] = useState<{ profileId: string; source: "demo" | "line"; error: string | null }>({
-    profileId: DEMO_PROFILE_ID,
-    source: "demo",
-    error: null,
-  });
+function useLineProfileId(
+  webProfileId: string | undefined,
+): { profileId: string; source: "demo" | "line" | "line_web"; error: string | null } {
+  const [state, setState] = useState<{
+    profileId: string;
+    source: "demo" | "line" | "line_web";
+    error: string | null;
+  }>(
+    webProfileId
+      ? { profileId: webProfileId, source: "line_web", error: null }
+      : { profileId: DEMO_PROFILE_ID, source: "demo", error: null },
+  );
 
   useEffect(() => {
+    if (webProfileId) return; // already have a real profile from the web login redirect
     if (!isLiffConfigured()) return; // stay on the demo profile
 
     let cancelled = false;
@@ -122,21 +133,22 @@ function useLineProfileId(): { profileId: string; source: "demo" | "line"; error
     return () => {
       cancelled = true;
     };
-  }, []);
+  }, [webProfileId]);
 
   return state;
 }
 
 function MemberPage() {
   const demoData = Route.useLoaderData();
-  const { profileId, source, error: liffError } = useLineProfileId();
+  const { profileId: webProfileId } = Route.useSearch();
+  const { profileId, source, error: liffError } = useLineProfileId(webProfileId);
 
-  // Once LIFF hands us a real profileId, refetch with the real data instead
-  // of the SSR-loaded demo data.
+  // Once LIFF or the web login hands us a real profileId, refetch with the
+  // real data instead of the SSR-loaded demo data.
   const { data } = useQuery({
     queryKey: ["member-data", profileId],
     queryFn: () => getMemberData({ data: profileId }),
-    enabled: source === "line",
+    enabled: source !== "demo",
     initialData: source === "demo" ? demoData : undefined,
   });
 
@@ -147,9 +159,9 @@ function MemberPage() {
       <div>
         <h1 className="text-2xl font-bold text-foreground">會員資料 + 報告查詢</h1>
         <p className="mt-1 text-sm text-muted-foreground">
-          {source === "line"
-            ? "已透過 LINE 登入。"
-            : "Demo 頁面（尚未設定 LIFF，顯示固定測試帳號）。"}
+          {source === "line" && "已透過 LINE 登入（LIFF）。"}
+          {source === "line_web" && "已透過 LINE 登入（網頁）。"}
+          {source === "demo" && "Demo 頁面（尚未設定 LIFF，顯示固定測試帳號）。"}
         </p>
         {liffError && (
           <p className="mt-1 text-sm text-destructive">LINE 登入失敗：{liffError}</p>

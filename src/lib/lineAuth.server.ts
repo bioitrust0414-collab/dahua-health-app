@@ -1,8 +1,9 @@
 // src/lib/lineAuth.server.ts
-// SERVER-ONLY. Verifies a LINE ID token against LINE's own verification
-// endpoint and maps the LINE user onto a `profiles` row via `line_user_id`.
-// Uses raw REST calls to Supabase (see supabaseAdmin.ts) rather than the
-// supabase-js client — see that file's comment for why.
+// SERVER-ONLY. Verifies LINE tokens (from LIFF's ID token, or from a
+// standalone web LINE Login OAuth code exchange) and maps the LINE user
+// onto a `profiles` row via `line_user_id`. Uses raw REST calls to
+// Supabase (see supabaseAdmin.ts) rather than the supabase-js client —
+// see that file's comment for why.
 
 import { restGetOne, restPatch, adminCreateUser } from "./supabaseAdmin";
 
@@ -52,9 +53,42 @@ async function verifyLineIdToken(idToken: string): Promise<LineVerifyResponse> {
   return payload;
 }
 
+/** LIFF path: browser already has an ID token from the LIFF SDK. */
 export async function upsertProfileForLineUser(idToken: string): Promise<LineProfile> {
   const claims = await verifyLineIdToken(idToken);
+  return upsertProfileForClaims(claims);
+}
 
+/** Standalone web LINE Login path: exchange an OAuth authorization code for tokens. */
+export async function exchangeCodeForProfile(code: string, redirectUri: string): Promise<LineProfile> {
+  const channelId = process.env.LINE_LOGIN_CHANNEL_ID;
+  const channelSecret = process.env.LINE_LOGIN_CHANNEL_SECRET;
+  if (!channelId || !channelSecret) {
+    throw new Error("LINE_LOGIN_CHANNEL_ID / LINE_LOGIN_CHANNEL_SECRET not set in the server environment.");
+  }
+
+  const tokenRes = await fetch("https://api.line.me/oauth2/v2.1/token", {
+    method: "POST",
+    headers: { "Content-Type": "application/x-www-form-urlencoded" },
+    body: new URLSearchParams({
+      grant_type: "authorization_code",
+      code,
+      redirect_uri: redirectUri,
+      client_id: channelId,
+      client_secret: channelSecret,
+    }),
+  });
+
+  if (!tokenRes.ok) {
+    throw new Error(`LINE token exchange failed: ${tokenRes.status} ${await tokenRes.text()}`);
+  }
+
+  const { id_token: idToken } = (await tokenRes.json()) as { id_token: string };
+  const claims = await verifyLineIdToken(idToken);
+  return upsertProfileForClaims(claims);
+}
+
+async function upsertProfileForClaims(claims: LineVerifyResponse): Promise<LineProfile> {
   const existing = await restGetOne<{ id: string; full_name: string | null }>(
     "profiles",
     `line_user_id=eq.${claims.sub}`,
@@ -74,7 +108,7 @@ export async function upsertProfileForLineUser(idToken: string): Promise<LinePro
   const created = await adminCreateUser({
     email: `line-${claims.sub}@liff.dahua-health-app.local`,
     email_confirm: true,
-    user_metadata: { line_user_id: claims.sub, source: "line_liff" },
+    user_metadata: { line_user_id: claims.sub, source: "line_login" },
   });
 
   await restPatch("profiles", `id=eq.${created.id}`, {
