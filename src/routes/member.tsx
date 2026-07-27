@@ -54,29 +54,16 @@ const getMemberData = createServerFn({ method: "GET" })
     return profileId;
   })
   .handler(async ({ data: profileId }) => {
-    const { getSupabaseAdmin } = await import("@/lib/supabaseAdmin");
-    const supabase = getSupabaseAdmin();
+    const { restGetOne, restGetList } = await import("@/lib/supabaseAdmin");
 
-    const [{ data: profile, error: profileError }, { data: reports, error: reportsError }] =
-      await Promise.all([
-        supabase
-          .from("profiles")
-          .select("*")
-          .eq("id", profileId)
-          .single()
-          .overrideTypes<ProfileRow>(),
-        supabase
-          .from("reports")
-          .select("*")
-          .eq("profile_id", profileId)
-          .order("report_date", { ascending: false })
-          .overrideTypes<ReportRow[]>(),
-      ]);
+    const [profile, reports] = await Promise.all([
+      restGetOne<ProfileRow>("profiles", `id=eq.${profileId}`),
+      restGetList<ReportRow>("reports", `profile_id=eq.${profileId}&order=report_date.desc`),
+    ]);
 
-    if (profileError) throw new Error(profileError.message);
-    if (reportsError) throw new Error(reportsError.message);
+    if (!profile) throw new Error(`Profile ${profileId} not found`);
 
-    return { profile: profile as ProfileRow, reports: (reports ?? []) as ReportRow[] };
+    return { profile, reports };
   });
 
 // 把 LINE ID token 換成 profileId：伺服器端會呼叫 LINE 驗證這個 token 是真的、

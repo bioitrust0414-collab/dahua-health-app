@@ -1,28 +1,75 @@
 // src/lib/supabaseAdmin.ts
-// SERVER-ONLY. Only import this from server functions (createServerFn) or
-// other server-side code — never from a component that runs in the browser.
-// Uses the service role key to bypass RLS, since server functions act as a
-// trusted backend rendering data on the member's behalf (there is no
-// Supabase Auth session wired into the frontend yet — see /member route).
+// SERVER-ONLY. Direct REST calls to Supabase (PostgREST + Auth Admin API)
+// instead of the @supabase/supabase-js client. We hit a persistent
+// "JWT issued at future" error from the JS client's internal handling of
+// the service role key (reproduced identically with both the new sb_secret_
+// key and the legacy service_role JWT — so it wasn't a key-format issue,
+// it was the client library itself). Raw fetch() calls sidestep whatever
+// internal decode logic was misfiring, and are just as correct: Supabase's
+// REST APIs are the same APIs the JS client calls under the hood.
 
-import { createClient } from "@supabase/supabase-js";
-
-let cachedClient: ReturnType<typeof createClient> | null = null;
-
-export function getSupabaseAdmin() {
-  if (cachedClient) return cachedClient;
-
+function getConfig() {
   const url = process.env.SUPABASE_URL;
   const serviceRoleKey = process.env.SUPABASE_SERVICE_ROLE_KEY;
-
   if (!url || !serviceRoleKey) {
-    throw new Error(
-      "SUPABASE_URL / SUPABASE_SERVICE_ROLE_KEY not set in the server environment.",
-    );
+    throw new Error("SUPABASE_URL / SUPABASE_SERVICE_ROLE_KEY not set in the server environment.");
   }
+  return { url, serviceRoleKey };
+}
 
-  cachedClient = createClient(url, serviceRoleKey, {
-    auth: { persistSession: false },
+function authHeaders(serviceRoleKey: string, extra?: Record<string, string>) {
+  return {
+    apikey: serviceRoleKey,
+    Authorization: `Bearer ${serviceRoleKey}`,
+    ...extra,
+  };
+}
+
+/** GET a single row via PostgREST, e.g. table="profiles", filter="id=eq.<uuid>" */
+export async function restGetOne<T>(table: string, filter: string): Promise<T | null> {
+  const { url, serviceRoleKey } = getConfig();
+  const res = await fetch(`${url}/rest/v1/${table}?${filter}&select=*&limit=1`, {
+    headers: authHeaders(serviceRoleKey, { Accept: "application/vnd.pgrst.object+json" }),
   });
-  return cachedClient;
+  if (res.status === 406) return null; // PGRST116: no rows for object+json
+  if (!res.ok) throw new Error(`Supabase REST GET ${table} failed: ${res.status} ${await res.text()}`);
+  return (await res.json()) as T;
+}
+
+/** GET a list of rows via PostgREST */
+export async function restGetList<T>(table: string, query: string): Promise<T[]> {
+  const { url, serviceRoleKey } = getConfig();
+  const res = await fetch(`${url}/rest/v1/${table}?${query}`, {
+    headers: authHeaders(serviceRoleKey),
+  });
+  if (!res.ok) throw new Error(`Supabase REST GET ${table} failed: ${res.status} ${await res.text()}`);
+  return (await res.json()) as T[];
+}
+
+/** PATCH rows via PostgREST */
+export async function restPatch(table: string, filter: string, body: unknown): Promise<void> {
+  const { url, serviceRoleKey } = getConfig();
+  const res = await fetch(`${url}/rest/v1/${table}?${filter}`, {
+    method: "PATCH",
+    headers: authHeaders(serviceRoleKey, { "Content-Type": "application/json" }),
+    body: JSON.stringify(body),
+  });
+  if (!res.ok) throw new Error(`Supabase REST PATCH ${table} failed: ${res.status} ${await res.text()}`);
+}
+
+/** Create an auth user via the Admin REST API (auth.admin.createUser equivalent) */
+export async function adminCreateUser(input: {
+  email: string;
+  email_confirm?: boolean;
+  user_metadata?: Record<string, unknown>;
+}): Promise<{ id: string }> {
+  const { url, serviceRoleKey } = getConfig();
+  const res = await fetch(`${url}/auth/v1/admin/users`, {
+    method: "POST",
+    headers: authHeaders(serviceRoleKey, { "Content-Type": "application/json" }),
+    body: JSON.stringify(input),
+  });
+  if (!res.ok) throw new Error(`Supabase admin createUser failed: ${res.status} ${await res.text()}`);
+  const data = (await res.json()) as { id: string };
+  return data;
 }

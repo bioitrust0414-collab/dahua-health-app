@@ -1,19 +1,15 @@
 // src/lib/lineAuth.server.ts
 // SERVER-ONLY. Verifies a LINE ID token against LINE's own verification
-// endpoint (never trusts a LINE user id handed over directly by the
-// client) and maps the LINE user onto a `profiles` row via `line_user_id`.
-//
-// profiles.id has a FK to auth.users(id), so a brand-new LINE user needs a
-// corresponding auth user created first (via the admin API) before a
-// profile can exist — the existing `handle_new_user` trigger then creates
-// the bare profile row, which we immediately enrich with LINE data.
+// endpoint and maps the LINE user onto a `profiles` row via `line_user_id`.
+// Uses raw REST calls to Supabase (see supabaseAdmin.ts) rather than the
+// supabase-js client — see that file's comment for why.
 
-import { getSupabaseAdmin } from "./supabaseAdmin";
+import { restGetOne, restPatch, adminCreateUser } from "./supabaseAdmin";
 
 interface LineVerifyResponse {
   iss: string;
   sub: string; // LINE user id — stable, unique per user per channel
-  aud: string; // should match our LIFF's LINE Login channel id
+  aud: string;
   exp: number;
   iat: number;
   name?: string;
@@ -58,41 +54,33 @@ async function verifyLineIdToken(idToken: string): Promise<LineVerifyResponse> {
 
 export async function upsertProfileForLineUser(idToken: string): Promise<LineProfile> {
   const claims = await verifyLineIdToken(idToken);
-  const supabase = getSupabaseAdmin();
 
-  const { data: existingRaw, error: lookupError } = await supabase
-    .from("profiles")
-    .select("id, full_name")
-    .eq("line_user_id", claims.sub)
-    .maybeSingle();
-
-  if (lookupError) throw new Error(`Profile lookup failed: ${lookupError.message}`);
-
-  const existing = existingRaw as { id: string; full_name: string | null } | null;
+  const existing = await restGetOne<{ id: string; full_name: string | null }>(
+    "profiles",
+    `line_user_id=eq.${claims.sub}`,
+  );
 
   if (existing) {
-    return { profileId: existing.id, lineUserId: claims.sub, displayName: existing.full_name ?? claims.name ?? null };
+    return {
+      profileId: existing.id,
+      lineUserId: claims.sub,
+      displayName: existing.full_name ?? claims.name ?? null,
+    };
   }
 
-  // New LINE user: create an auth user first so profiles.id (FK to
-  // auth.users) has somewhere to point. handle_new_user trigger creates
-  // the bare profile row; we then enrich it with LINE data below.
-  const { data: created, error: createError } = await supabase.auth.admin.createUser({
+  // New LINE user: create an auth user first (profiles.id has a FK to
+  // auth.users). handle_new_user trigger creates the bare profile row;
+  // we then enrich it with LINE data below.
+  const created = await adminCreateUser({
     email: `line-${claims.sub}@liff.dahua-health-app.local`,
     email_confirm: true,
     user_metadata: { line_user_id: claims.sub, source: "line_liff" },
   });
 
-  if (createError || !created?.user) {
-    throw new Error(`Failed to create auth user for LINE login: ${createError?.message}`);
-  }
+  await restPatch("profiles", `id=eq.${created.id}`, {
+    line_user_id: claims.sub,
+    full_name: claims.name ?? null,
+  });
 
-  const { error: updateError } = await supabase
-    .from("profiles")
-    .update({ line_user_id: claims.sub, full_name: claims.name ?? null } as never)
-    .eq("id", created.user.id);
-
-  if (updateError) throw new Error(`Failed to attach LINE profile data: ${updateError.message}`);
-
-  return { profileId: created.user.id, lineUserId: claims.sub, displayName: claims.name ?? null };
+  return { profileId: created.id, lineUserId: claims.sub, displayName: claims.name ?? null };
 }
