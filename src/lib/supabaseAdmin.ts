@@ -18,9 +18,13 @@ function getConfig() {
 }
 
 function authHeaders(serviceRoleKey: string, extra?: Record<string, string>) {
+  // IMPORTANT: send the key on the `apikey` header ONLY. Supabase's new
+  // publishable/secret key system is not JWT-based — if the same value is
+  // also sent on `Authorization: Bearer`, the platform tries to parse it
+  // as a JWT and rejects the request (this was the actual cause of the
+  // "JWT issued at future" error, not a client-library or key-format bug).
   return {
     apikey: serviceRoleKey,
-    Authorization: `Bearer ${serviceRoleKey}`,
     ...extra,
   };
 }
