@@ -1,0 +1,685 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>HeyChew 嗨嚼 - 頂級寵物保養美學官網</title>
+    <!-- 引入 Tailwind CSS 確保極致優雅的 UI 設計 -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script>
+        tailwind.config = {
+            theme: {
+                extend: {
+                    colors: {
+                        brand: {
+                            primary: '#dfa290',   /* 溫暖品牌粉橘色 */
+                            light: '#fbf7f5',     /* 極柔和背景沙色 */
+                            dark: '#936b5c',      /* 雅緻深褐色 */
+                            text: '#4a423e',      /* 質感炭黑色 */
+                            muted: '#8a7e78',     /* 灰褐色說明字 */
+                            border: '#f0eae6',    /* 溫和邊框色 */
+                        }
+                    }
+                }
+            }
+        }
+    </script>
+    <style>
+        html {
+            scroll-behavior: smooth;
+        }
+        body {
+            background-color: #fbf7f5;
+            color: #4a423e;
+        }
+        .page-section {
+            display: none;
+            opacity: 0;
+            transform: translateY(10px);
+            transition: opacity 0.4s ease, transform 0.4s ease;
+        }
+        .page-section.active {
+            display: block;
+            opacity: 1;
+            transform: translateY(0);
+        }
+        .no-scrollbar::-webkit-scrollbar {
+            display: none;
+        }
+        .no-scrollbar {
+            -ms-overflow-style: none;
+            scrollbar-width: none;
+        }
+    </style>
+</head>
+<body class="font-sans antialiased min-h-screen flex flex-col">
+
+    <!-- 頂部動態通知 Toast -->
+    <div id="toast" class="fixed top-6 right-6 z-[2000] transform -translate-y-24 opacity-0 transition-all duration-300 ease-out bg-brand-dark text-white px-6 py-4 rounded-xl shadow-xl flex items-center gap-3">
+        <span id="toast-icon">✨</span>
+        <span id="toast-text" class="font-medium tracking-wide">商品已成功加入購物車</span>
+    </div>
+
+    <!-- 導覽列 -->
+    <header class="fixed top-0 left-0 w-full bg-white/95 backdrop-blur-md z-[999] border-b border-brand-border shadow-sm">
+        <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 h-20 flex items-center justify-between">
+            
+            <!-- 品牌 LOGO -->
+            <div class="flex items-center gap-3 cursor-pointer" onclick="switchPage('home')">
+                <!-- 內嵌精緻 LOGO 圖檔 -->
+                <img src="heychewp1_logo.jpg" alt="HeyChew Logo" class="h-12 w-12 object-contain rounded-full">
+                <span class="text-xl sm:text-2xl font-bold tracking-widest text-brand-dark">HeyChew</span>
+                <span class="hidden sm:inline-block h-4 w-[1px] bg-brand-primary"></span>
+                <span class="hidden sm:inline-block text-xs font-light tracking-widest text-brand-muted uppercase">Pet Beauty</span>
+            </div>
+
+            <!-- 桌上型電腦選單 -->
+            <nav class="hidden md:flex items-center gap-8">
+                <button class="text-sm font-medium tracking-wider text-brand-text hover:text-brand-primary py-2" onclick="switchPage('home')">首頁</button>
+                <button class="text-sm font-medium tracking-wider text-brand-text hover:text-brand-primary py-2" onclick="switchPage('about')">品牌故事</button>
+                
+                <!-- 商品下拉選單 -->
+                <div class="relative group">
+                    <button class="text-sm font-medium tracking-wider text-brand-text hover:text-brand-primary py-2 flex items-center gap-1" onclick="switchPage('shop')">
+                        所有商品 <span class="text-[10px] text-brand-muted group-hover:rotate-180 transition-transform duration-300">▼</span>
+                    </button>
+                    <div class="absolute left-1/2 -translate-x-1/2 top-full w-48 bg-white border border-brand-border rounded-xl shadow-lg py-2 opacity-0 invisible group-hover:opacity-100 group-hover:visible transition-all duration-300 transform translate-y-2 group-hover:translate-y-0 z-[1000]">
+                        <a onclick="switchPage('shop', 'joint')" class="block px-5 py-3 text-sm text-brand-text hover:bg-brand-light hover:text-brand-primary cursor-pointer text-center">🦴 關節照護系列</a>
+                        <a onclick="switchPage('shop', 'lysine')" class="block px-5 py-3 text-sm text-brand-text hover:bg-brand-light hover:text-brand-primary cursor-pointer text-center">🛡️ 離胺酸加強系列</a>
+                    </div>
+                </div>
+
+                <button class="text-sm font-medium tracking-wider text-brand-text hover:text-brand-primary py-2" onclick="switchPage('contact')">聯絡我們</button>
+            </nav>
+
+            <!-- 右側控制按鈕 -->
+            <div class="flex items-center gap-4">
+                <button class="relative p-2.5 hover:bg-brand-light rounded-full transition-colors duration-200" onclick="toggleCart(true)">
+                    <svg class="w-6 h-6 text-brand-dark" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" d="M16 11V7a4 4 0 00-8 0v4M5 9h14l1 12H4L5 9z"></path>
+                    </svg>
+                    <span id="cart-count" class="absolute -top-1 -right-1 bg-brand-primary text-white text-[10px] font-bold w-5 h-5 rounded-full flex items-center justify-center border-2 border-white">0</span>
+                </button>
+                <button class="md:hidden p-2 hover:bg-brand-light rounded-lg transition-colors" onclick="toggleMobileDrawer(true)">
+                    <svg class="w-6 h-6 text-brand-dark" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" d="M4 6h16M4 12h16m-7 6h7"></path>
+                    </svg>
+                </button>
+            </div>
+        </div>
+    </header>
+
+    <!-- 行動裝置側邊抽屜導覽 -->
+    <div id="mobile-drawer-overlay" class="fixed inset-0 bg-brand-text/40 backdrop-blur-sm z-[1001] opacity-0 pointer-events-none transition-opacity duration-300" onclick="toggleMobileDrawer(false)"></div>
+    <div id="mobile-drawer" class="fixed top-0 -left-80 w-72 h-full bg-white z-[1002] shadow-2xl p-6 transition-all duration-300 flex flex-col justify-between">
+        <div>
+            <div class="flex items-center justify-between pb-6 border-b border-brand-border">
+                <span class="text-lg font-bold text-brand-dark tracking-wider">選單導覽</span>
+                <button class="p-2 hover:bg-brand-light rounded-full" onclick="toggleMobileDrawer(false)">
+                    <svg class="w-5 h-5 text-brand-muted" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" d="M6 18L18 6M6 6l12 12"></path>
+                    </svg>
+                </button>
+            </div>
+            <nav class="mt-6 flex flex-col gap-4">
+                <a onclick="switchPage('home'); toggleMobileDrawer(false);" class="py-3 px-4 rounded-xl text-brand-text hover:bg-brand-light hover:text-brand-primary font-medium cursor-pointer transition-all">🏠 首頁</a>
+                <a onclick="switchPage('about'); toggleMobileDrawer(false);" class="py-3 px-4 rounded-xl text-brand-text hover:bg-brand-light hover:text-brand-primary font-medium cursor-pointer transition-all">📖 品牌故事</a>
+                <div class="border-t border-brand-border/60 my-2"></div>
+                <span class="px-4 text-xs font-bold text-brand-muted tracking-widest uppercase">商品分類</span>
+                <a onclick="switchPage('shop', 'all'); toggleMobileDrawer(false);" class="py-2 px-6 rounded-xl text-sm text-brand-text hover:bg-brand-light hover:text-brand-primary cursor-pointer transition-all">• 顯示全部</a>
+                <a onclick="switchPage('shop', 'joint'); toggleMobileDrawer(false);" class="py-2 px-6 rounded-xl text-sm text-brand-text hover:bg-brand-light hover:text-brand-primary cursor-pointer transition-all">• 關節照護系列</a>
+                <a onclick="switchPage('shop', 'lysine'); toggleMobileDrawer(false);" class="py-2 px-6 rounded-xl text-sm text-brand-text hover:bg-brand-light hover:text-brand-primary cursor-pointer transition-all">• 離胺酸加強系列</a>
+                <div class="border-t border-brand-border/60 my-2"></div>
+                <a onclick="switchPage('contact'); toggleMobileDrawer(false);" class="py-3 px-4 rounded-xl text-brand-text hover:bg-brand-light hover:text-brand-primary font-medium cursor-pointer transition-all">✉️ 聯絡我們</a>
+            </nav>
+        </div>
+        <div class="text-center text-xs text-brand-muted border-t border-brand-border pt-4">
+            © 2026 愛你嚼生技有限公司
+        </div>
+    </div>
+
+    <!-- ================= 頁面：首頁 ================= -->
+    <main id="page-home" class="page-section active flex-grow pt-20">
+        <!-- 輪播 Banner -->
+        <section class="relative h-[480px] sm:h-[600px] overflow-hidden bg-brand-light">
+            <div id="slides-container" class="h-full w-full relative">
+                <div class="slide absolute inset-0 opacity-100 transition-all duration-1000 ease-in-out flex items-center bg-gradient-to-r from-[#f5eae4] to-[#fbf7f5]">
+                    <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 w-full grid grid-cols-1 md:grid-cols-2 gap-8 items-center">
+                        <div class="space-y-6 text-center md:text-left z-10">
+                            <span class="inline-block px-3 py-1 bg-brand-primary/10 text-brand-primary text-xs font-semibold tracking-widest rounded-full">FREEZE-DRIED TECH</span>
+                            <h1 class="text-3xl sm:text-5xl font-bold tracking-wider text-brand-dark leading-tight">黃金規格：一公克一塊</h1>
+                            <p class="text-base sm:text-lg text-brand-muted max-w-md">嚴選雞、牛、鴨原型純肉丁，完美注入生技機能成份，精準餵食無負擔。</p>
+                            <button onclick="switchPage('shop')" class="inline-block px-8 py-3.5 bg-brand-dark hover:bg-brand-primary text-white rounded-full font-medium tracking-wider shadow-lg transform hover:-translate-y-0.5 transition-all duration-300">
+                                立即探索商品
+                            </button>
+                        </div>
+                        <div class="hidden md:flex justify-center select-none z-10">
+                            <div class="w-80 h-80 bg-white border-2 border-[#f0eae6] rounded-3xl flex flex-col items-center justify-center shadow-xl p-4 transform rotate-3 hover:rotate-0 transition-transform duration-500">
+                                <img src="heychewp1_logo.jpg" alt="HeyChew Icon" class="w-48 h-48 object-contain">
+                                <span class="text-sm font-extrabold text-brand-dark tracking-wider mt-2">HeyChew 頂級寵物美學</span>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <!-- 品牌亮點區塊 -->
+        <section class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-20">
+            <div class="text-center max-w-2xl mx-auto mb-16">
+                <span class="text-brand-primary text-xs font-semibold tracking-widest uppercase">Our Philosophy</span>
+                <h2 class="text-2xl sm:text-3xl font-bold tracking-wider text-brand-dark mt-2 mb-4">我們對極致純淨的追求</h2>
+                <div class="w-12 h-0.5 bg-brand-primary mx-auto"></div>
+            </div>
+            <div class="grid grid-cols-1 md:grid-cols-3 gap-8">
+                <div class="bg-white rounded-2xl p-8 border border-brand-border shadow-sm text-center">
+                    <span class="text-4xl mb-6 block">🌱</span>
+                    <h3 class="text-lg font-bold text-brand-dark mb-3">100% 天然純淨原肉</h3>
+                    <p class="text-sm text-brand-muted leading-relaxed">嚴選優質雞、牛、鴨與特級豬耳、里肌原肉，堅持低溫與冷凍乾燥，鎖住營養。</p>
+                </div>
+                <div class="bg-white rounded-2xl p-8 border border-brand-border shadow-sm text-center">
+                    <span class="text-4xl mb-6 block">🥩</span>
+                    <h3 class="text-lg font-bold text-brand-dark mb-3">生技機能加強</h3>
+                    <p class="text-sm text-brand-muted leading-relaxed">特別針對全齡犬貓調配，黃金比例注入珍貴「蛋殼膜」與「離胺酸」，保養更精準。</p>
+                </div>
+                <div class="bg-white rounded-2xl p-8 border border-brand-border shadow-sm text-center">
+                    <span class="text-4xl mb-6 block">🛡️</span>
+                    <h3 class="text-lg font-bold text-brand-dark mb-3">絕對嚴苛安全標準</h3>
+                    <p class="text-sm text-brand-muted leading-relaxed">無人工添加糖、無穀、無防腐劑。成分完全透明公開，守護親近家人的食品安全。</p>
+                </div>
+            </div>
+        </section>
+    </main>
+
+    <!-- ================= 頁面：關於我們 (品牌故事) ================= -->
+    <main id="page-about" class="page-section flex-grow pt-20">
+        <section class="bg-[#f2e6e1] py-16 sm:py-24 text-center">
+            <div class="max-w-4xl mx-auto px-4">
+                <h1 class="text-3xl sm:text-4xl font-bold tracking-widest text-brand-dark mb-4">關於 HeyChew 嗨嚼</h1>
+                <p class="text-sm sm:text-base text-brand-muted tracking-wider">與自然共生，用愛寫下每一天的極致保養與美味篇章</p>
+            </div>
+        </section>
+
+        <section class="max-w-5xl mx-auto px-4 py-16 space-y-24 leading-relaxed text-brand-text">
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-12 items-center">
+                <div class="space-y-6">
+                    <h3 class="text-2xl font-bold text-brand-dark tracking-wide">記憶中的麵攤香氣，與屋簷下的溫慢眼神</h3>
+                    <p class="text-base">
+                        創辦人的兒時記憶裡，總有一個在路邊亮著微弱黃光的麵攤。那是阿公的麵攤[cite: 1]。
+                    </p>
+                    <p class="text-base">
+                        小時候最喜歡看著阿公忙完後，在木桌上點一碗熱騰騰的湯麵、開一瓶啤酒，身旁擺著幾碟最台式的民間美食——滷花生、香滷豬耳朵、黑白切[cite: 1]。那時，家裡的大黃狗總會乖巧地趴在桌腳，屋簷上的小貓也會悄悄探出頭，牠們用那憐憫又期待的眼神，目不轉睛地盯著阿公盤裡的小菜[cite: 1]。
+                    </p>
+                    <p class="text-base">
+                        阿公總會笑著捏一小塊沒有調味的純肉，溫柔地塞進牠們嘴裡。那幅畫面，藏著最樸實也最純粹的疼愛。
+                    </p>
+                </div>
+                <div class="flex justify-center select-none">
+                    <div class="w-full max-w-md bg-white p-3 rounded-2xl border border-brand-border shadow-md transform rotate-1 hover:rotate-0 transition-transform duration-500">
+                        <div class="relative overflow-hidden rounded-xl bg-[#fbf7f5] aspect-[4/3]">
+                            <img src="heychewbrandp1.jpg" alt="阿公老街麵攤記憶" class="w-full h-full object-cover">
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-12 items-center">
+                <div class="flex justify-center select-none order-2 md:order-1">
+                    <div class="w-full max-w-md bg-white p-3 rounded-2xl border border-brand-border shadow-md transform -rotate-1 hover:rotate-0 transition-transform duration-500">
+                        <div class="relative overflow-hidden rounded-xl bg-[#fbf7f5] aspect-[4/3]">
+                            <img src="heychewbrandp2.jpg" alt="阿春麵攤黑白切" class="w-full h-full object-cover">
+                        </div>
+                    </div>
+                </div>
+                <div class="space-y-6 order-1 md:order-2">
+                    <h3 class="text-2xl font-bold text-brand-dark tracking-wide">時光遷移，家人就該享受純粹的原型食物</h3>
+                    <p class="text-base">
+                        時光遷移，以前陪伴在阿公身邊的小狗小貓，現在何嘗不是我們最親近的家人？
+                    </p>
+                    <p class="text-base">
+                        既然是家人，就應該與我們一樣，享受著最自然、最沒有負擔的原型食物美味[cite: 1]。秉持著這份對家人的愛，「HeyChew 嗨嚼」將記憶中阿公桌上的那盤「豬耳朵」與「鮮切原肉」，升級為現代寵物的頂級保養美學[cite: 1]。我們堅持成分完全透明公開，只留下最新鮮的營養[cite: 1]。
+                    </p>
+                </div>
+            </div>
+
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-12 items-center">
+                <div class="space-y-6">
+                    <h3 class="text-2xl font-bold text-brand-dark tracking-wide">守護生命的底線：食品安全與環境永續</h3>
+                    <p class="text-base">
+                        對家人而言，「食品安全」是絕對不可妥協的底線[cite: 1]。我們拒絕加工過度、添加大量人工香料與化學防腐劑的食品，那會帶給毛孩未知的身體負擔[cite: 1]。
+                    </p>
+                    <p class="text-base">
+                        HeyChew 旗下所有產品在開發過程中，100%天然、無穀、無添加糖[cite: 1]。我們採用嚴格的低溫烘焙與真空凍乾技術，鎖住食材最鮮甜的原始風味[cite: 1]。
+                    </p>
+                </div>
+                <div class="flex justify-center select-none">
+                    <div class="w-full max-w-md bg-white p-3 rounded-2xl border border-brand-border shadow-md transform rotate-2 hover:rotate-0 transition-transform duration-500">
+                        <div class="relative overflow-hidden rounded-xl bg-[#fbf7f5] aspect-[16/9]">
+                            <img src="heychewbrandp3.jpg" alt="遠眺日落的背影" class="w-full h-full object-cover">
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </section>
+    </main>
+
+    <!-- ================= 頁面：所有商品 ================= -->
+    <main id="page-shop" class="page-section flex-grow pt-20">
+        <section class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-16">
+            <div class="text-center max-w-xl mx-auto mb-10">
+                <span class="text-brand-primary text-xs font-semibold tracking-widest uppercase">Shop List</span>
+                <h2 class="text-2xl sm:text-3xl font-bold tracking-wider text-brand-dark mt-2 mb-4">探索精準機能寵物美學</h2>
+                <div class="w-12 h-0.5 bg-brand-primary mx-auto"></div>
+            </div>
+
+            <!-- 分類篩選按鈕 -->
+            <div class="flex flex-wrap items-center justify-center gap-3 mb-12">
+                <button id="btn-filter-all" onclick="filterProducts('all')" class="px-6 py-2.5 rounded-full text-sm font-medium tracking-wider bg-brand-dark text-white border border-brand-dark transition-all duration-300">顯示全部</button>
+                <button id="btn-filter-joint" onclick="filterProducts('joint')" class="px-6 py-2.5 rounded-full text-sm font-medium tracking-wider bg-white text-brand-text hover:bg-brand-light border border-brand-border transition-all duration-300">🦴 關節照護系列</button>
+                <button id="btn-filter-lysine" onclick="filterProducts('lysine')" class="px-6 py-2.5 rounded-full text-sm font-medium tracking-wider bg-white text-brand-text hover:bg-brand-light border border-brand-border transition-all duration-300">🛡️ 離胺酸加強系列</button>
+            </div>
+
+            <!-- 商品網格 -->
+            <div id="product-list" class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-8">
+                <!-- JavaScript 動態渲染 -->
+            </div>
+        </section>
+    </main>
+
+    <!-- ================= 頁面：商品詳細頁面 ================= -->
+    <main id="page-product-detail" class="page-section flex-grow pt-20">
+        <section class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-10">
+            <nav class="flex items-center gap-2 text-sm text-brand-muted mb-8 select-none">
+                <span onclick="switchPage('home')" class="hover:text-brand-primary cursor-pointer">首頁</span>
+                <span>/</span>
+                <span onclick="switchPage('shop')" class="hover:text-brand-primary cursor-pointer">所有商品</span>
+                <span>/</span>
+                <span id="detail-breadcrumb-active" class="text-brand-dark font-medium">載入中...</span>
+            </nav>
+
+            <div class="grid grid-cols-1 lg:grid-cols-2 gap-12 bg-white rounded-3xl p-6 sm:p-10 border border-brand-border shadow-sm">
+                <div id="detail-image-box" class="aspect-square bg-white rounded-2xl flex items-center justify-center overflow-hidden border border-brand-border p-4">
+                    <!-- 動態渲染高解析產品實體圖 -->
+                </div>
+
+                <div class="flex flex-col justify-between">
+                    <div class="space-y-6">
+                        <div class="flex items-center gap-3">
+                            <span id="detail-category-badge" class="px-3 py-1 bg-brand-primary/10 text-brand-primary text-xs font-semibold rounded-full">分類</span>
+                            <span class="text-xs text-brand-muted font-medium tracking-wider">機能原型守護</span>
+                        </div>
+                        <h1 id="detail-title" class="text-2xl sm:text-3xl font-bold text-brand-dark tracking-wide">商品名稱...</h1>
+                        
+                        <!-- 雙規格切換器 -->
+                        <div class="space-y-2">
+                            <label class="block text-xs font-bold text-brand-dark tracking-wider uppercase">選擇規格包裝</label>
+                            <div class="flex gap-3">
+                                <button id="spec-btn-bag" onclick="changeDetailSpec('bag')" class="flex-1 py-3 px-4 rounded-xl border-2 text-left transition-all duration-200">
+                                    <div class="text-xs font-bold text-brand-dark">30g / 袋裝</div>
+                                    <div class="text-xs text-brand-primary font-bold mt-0.5">NT$ 180 <span class="text-[10px] text-brand-muted font-normal">(精巧體驗裝)</span></div>
+                                </button>
+                                <button id="spec-btn-can" onclick="changeDetailSpec('can')" class="flex-1 py-3 px-4 rounded-xl border-2 text-left transition-all duration-200">
+                                    <div class="text-xs font-bold text-brand-dark">150g / 罐裝</div>
+                                    <div class="text-xs text-brand-primary font-bold mt-0.5">NT$ 825 <span class="text-[10px] text-brand-muted font-normal">(家庭回購量)</span></div>
+                                </button>
+                            </div>
+                        </div>
+
+                        <div class="flex items-center gap-4 py-2 border-y border-brand-border/60">
+                            <span id="detail-price" class="text-2xl font-extrabold text-brand-primary">NT$ 180</span>
+                        </div>
+
+                        <div class="space-y-2">
+                            <h4 class="text-xs font-bold text-brand-dark tracking-wider uppercase">✨ 商品訴求與成份特色</h4>
+                            <p id="detail-summary" class="text-sm text-brand-text leading-relaxed">介紹載入中...</p>
+                        </div>
+                    </div>
+
+                    <div class="mt-8 pt-6 border-t border-brand-border/60 space-y-4">
+                        <div class="flex items-center justify-between">
+                            <span class="text-sm font-bold text-brand-dark">選購數量</span>
+                            <div class="flex items-center border border-brand-border rounded-xl overflow-hidden bg-brand-light">
+                                <button onclick="adjustDetailPageQty(-1)" class="px-4 py-2 hover:bg-brand-border text-brand-dark font-medium">-</button>
+                                <span id="detail-qty-input" class="px-6 text-sm font-bold">1</span>
+                                <button onclick="adjustDetailPageQty(1)" class="px-4 py-2 hover:bg-brand-border text-brand-dark font-medium">+</button>
+                            </div>
+                        </div>
+                        <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                            <button id="detail-add-cart-btn" class="py-4 bg-brand-light hover:bg-brand-border text-brand-dark font-semibold rounded-xl text-sm tracking-widest transition-all">加入購物車</button>
+                            <button id="detail-checkout-now-btn" class="py-4 bg-brand-dark hover:bg-brand-primary text-white font-semibold rounded-xl text-sm tracking-widest shadow-lg transition-all">立即購買</button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </section>
+    </main>
+
+    <!-- ================= 頁面：聯絡我們 ================= -->
+    <main id="page-contact" class="page-section flex-grow pt-20">
+        <section class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-16">
+            <div class="text-center max-w-xl mx-auto mb-12">
+                <span class="text-brand-primary text-xs font-semibold tracking-widest uppercase">Get in touch</span>
+                <h2 class="text-2xl sm:text-3xl font-bold tracking-wider text-brand-dark mt-2 mb-4">與我們聯繫</h2>
+                <div class="w-12 h-0.5 bg-brand-primary mx-auto"></div>
+            </div>
+
+            <div class="grid grid-cols-1 lg:grid-cols-2 gap-10">
+                <div class="bg-white rounded-2xl border border-brand-border p-8 shadow-sm space-y-6">
+                    <div>
+                        <h3 class="text-xl font-bold text-brand-dark mb-2">愛你嚼生技有限公司</h3>
+                        <p class="text-sm text-brand-muted">傳承阿公麵攤疼愛家人的初心，我們重視與每位家長的即時溝通。歡迎隨時與我們交流毛孩的飲食保健！</p>
+                    </div>
+                    <div class="space-y-4 text-sm text-brand-text">
+                        <p>📞 免付費客服專線：0800-000-000</p>
+                        <p>✉️ 客服電子信箱：support@heychew-pet.com</p>
+                        <p>💬 官方 LINE 帳號：@heychew_pet</p>
+                    </div>
+                </div>
+
+                <div class="bg-white rounded-2xl border border-brand-border p-8 shadow-sm">
+                    <form onsubmit="handleContactSubmit(event)" class="space-y-4">
+                        <input type="text" class="w-full bg-brand-light border border-brand-border rounded-xl px-4 py-3 text-sm focus:outline-none focus:border-brand-primary" required placeholder="您的稱呼">
+                        <input type="tel" class="w-full bg-brand-light border border-brand-border rounded-xl px-4 py-3 text-sm focus:outline-none focus:border-brand-primary" required placeholder="聯絡電話">
+                        <textarea rows="4" class="w-full bg-brand-light border border-brand-border rounded-xl px-4 py-3 text-sm focus:outline-none focus:border-brand-primary resize-none" required placeholder="請填寫諮詢內容..."></textarea>
+                        <button type="submit" class="w-full bg-brand-dark hover:bg-brand-primary text-white font-medium py-3.5 rounded-xl tracking-widest transition-all">送出留言訊息</button>
+                    </form>
+                </div>
+            </div>
+        </section>
+    </main>
+
+    <!-- 購物車抽屜面板 -->
+    <div id="cart-drawer-overlay" class="fixed inset-0 bg-brand-text/40 backdrop-blur-sm z-[1100] opacity-0 pointer-events-none transition-opacity duration-300" onclick="toggleCart(false)"></div>
+    <div id="cart-drawer" class="fixed top-0 -right-full md:-right-[450px] w-full md:w-[450px] h-full bg-white z-[1101] shadow-2xl transition-all duration-300 flex flex-col">
+        <div class="px-6 py-5 border-b border-brand-border flex items-center justify-between">
+            <span class="text-lg font-bold text-brand-dark tracking-wider">您的購物車</span>
+            <button class="p-2 hover:bg-brand-light rounded-full" onclick="toggleCart(false)">✕</button>
+        </div>
+        <div id="cart-items-container" class="flex-grow overflow-y-auto p-6 space-y-6"></div>
+        <div class="p-6 border-t border-brand-border bg-brand-light space-y-4">
+            <div class="flex items-center justify-between font-bold text-brand-dark text-lg">
+                <span>合計金額</span>
+                <span id="cart-total">NT$ 0</span>
+            </div>
+            <button onclick="checkoutCart()" class="w-full py-4 bg-brand-dark hover:bg-brand-primary text-white rounded-xl font-bold tracking-widest shadow-md transition-all">前往安全結帳</button>
+        </div>
+    </div>
+
+    <!-- 頁尾 -->
+    <footer class="bg-[#332d2b] text-brand-light py-12 px-6 mt-auto rounded-t-[40px]">
+        <div class="max-w-7xl mx-auto grid grid-cols-1 md:grid-cols-3 gap-8 text-sm text-[#bfaea7]">
+            <div class="space-y-3">
+                <div class="flex items-center gap-2">
+                    <img src="heychewp1_logo.jpg" alt="HeyChew Footer Logo" class="h-8 w-8 object-contain rounded-full bg-white">
+                    <h3 class="text-xl font-bold tracking-widest text-brand-primary">HeyChew</h3>
+                </div>
+                <p class="leading-relaxed">堅持一公克一塊黃金規格，以生技機能融合原型鮮肉，給毛孩最精準安全的日常呵護。</p>
+            </div>
+            <div>
+                <h4 class="text-white font-bold mb-3">機能系列</h4>
+                <p class="space-y-1">🦴 蛋殼膜關節照護系列<br>🛡️ 離胺酸免疫加強系列</p>
+            </div>
+            <div class="md:text-right">
+                <p>&copy; 2026 愛你嚼生技有限公司. 版權所有.</p>
+                <p class="text-xs text-[#8a7e78] mt-2">6Sku_20260603v1 實體商品完美上線版</p>
+            </div>
+        </div>
+    </footer>
+
+    <!-- 前端核心控制 JavaScript -->
+    <script>
+        // 6 SKU 機能資料庫（完全對齊您的 6 張實體產品圖檔與機能分類）
+        const productsDatabase = [
+            { id: 1, name: "凍乾雞胸肉 義大利蛋殼膜", category: "joint", badge: "🦴 關節守護", imgCode: "heychewp1.jpg", summary: "添加珍貴蛋殼膜，富含天然葡萄糖胺與膠原蛋白。嚴選優質豬耳朵原型烘培，結構強韌幫助潔牙卸壓，同時強力守護髕骨與靈活關節。", prices: { bag: 180, can: 825 } },
+            { id: 2, name: "凍乾牛肉 紐西蘭草飼牛", category: "joint", badge: "🦴 關節守護", imgCode: "heychewp4.jpg", summary: "添加機能蛋殼膜核心成份。挑選肉質最緊實且超低脂肪的新鮮豬里肌肉，經低溫烘焙呈現純肉原始香氣，支撐犬貓每日跃動力。", prices: { bag: 180, can: 825 } },
+            { id: 3, name: "急速鎖鮮 凍乾鴨肉丁", category: "joint", badge: "🦴 關節守護", imgCode: "heychewp3.jpg", summary: "1公克1塊黃金規格，黃金比例融入蛋殼膜成份。採用真空冷凍乾燥技術鎖住多汁營養，酥脆鬆軟好入口，全齡犬貓關節保養首選。", prices: { bag: 180, can: 825 } },
+            { id: 4, name: "凍乾雞胸肉 離胺酸加強添加", category: "lysine", badge: "🛡️ 離胺酸加強", imgCode: "heychewp2.jpg", summary: "高純度離胺酸加強配方。低脂雞胸肉拌入天然排毛貓草，並注入高規格離胺酸，日常輕鬆餵食，全面拉高呼吸道與眼鼻防護網。", prices: { bag: 180, can: 825 } },
+            { id: 5, name: "極速鎖鮮 凍乾草飼牛 (加強版)", category: "lysine", badge: "🛡️ 離胺酸加強", imgCode: "heychewp5.jpg", summary: "1公克1塊黃金規格。頂級真空凍乾雞丁完美融合高規離胺酸，專專為台灣潮濕多雨氣候調配，有效提升全齡犬貓日常環境適應力。", prices: { bag: 180, can: 825 } },
+            { id: 6, name: "舒壓溫和 宜蘭在地凍乾鴨肉 (加強版)", category: "lysine", badge: "🛡️ 離胺酸加強", imgCode: "heychewp6.jpg", summary: "天然雞肉片與膳食纖維貓草的黃金結合，深度融入離胺酸成份。針對易哈啾、易流眼淚的敏感體質毛孩進行深度的呼吸道免疫調整。", prices: { bag: 180, can: 825 } }
+        ];
+
+        let cart = [];
+        let currentDetailProduct = null;
+        let currentDetailSpec = 'bag';
+        let currentDetailQty = 1;
+
+        function switchPage(pageId, categoryFilter = 'all') {
+            document.querySelectorAll('.page-section').forEach(sec => sec.classList.remove('active'));
+            const target = document.getElementById(`page-${pageId}`);
+            if (target) target.classList.add('active');
+            window.scrollTo({ top: 0, behavior: 'smooth' });
+            if (pageId === 'shop') filterProducts(categoryFilter);
+        }
+
+        function filterProducts(category) {
+            ['all', 'joint', 'lysine'].forEach(cat => {
+                const btn = document.getElementById(`btn-filter-${cat}`);
+                if (btn) btn.className = cat === category ? "px-6 py-2.5 rounded-full text-sm font-medium tracking-wider bg-brand-dark text-white border border-brand-dark transition-all duration-300" : "px-6 py-2.5 rounded-full text-sm font-medium tracking-wider bg-white text-brand-text hover:bg-brand-light border border-brand-border transition-all duration-300";
+            });
+
+            const container = document.getElementById('product-list');
+            if (!container) return;
+            container.innerHTML = '';
+
+            const filteredData = productsDatabase.filter(p => category === 'all' || p.category === category);
+
+            filteredData.forEach(item => {
+                const card = document.createElement('div');
+                card.className = "bg-white rounded-2xl overflow-hidden border border-brand-border shadow-sm hover:shadow-md transition-all duration-300 flex flex-col";
+                card.innerHTML = `
+                    <div onclick="navigateToDetail(${item.id})" class="relative bg-white aspect-square flex items-center justify-center cursor-pointer group overflow-hidden border-b border-brand-border/40 p-4">
+                        <span class="absolute top-4 left-4 bg-brand-primary text-white text-[11px] font-semibold tracking-wider px-3 py-1 rounded-full z-10">${item.badge}</span>
+                        <img src="${item.imgCode}" alt="${item.name}" class="w-full h-full object-contain group-hover:scale-105 transition-transform duration-500">
+                    </div>
+                    <div class="p-6 flex flex-col justify-between flex-grow text-center">
+                        <div class="space-y-2 mb-6 cursor-pointer" onclick="navigateToDetail(${item.id})">
+                            <h3 class="text-base sm:text-lg font-bold text-brand-dark hover:text-brand-primary transition-colors">${item.name}</h3>
+                            <p class="text-xs text-brand-muted line-clamp-2 leading-relaxed">${item.summary}</p>
+                        </div>
+                        <div>
+                            <div class="text-brand-primary font-bold text-base mb-5">NT$ 180 <span class="text-xs text-brand-muted font-normal">起 / (原型精準餵食)</span></div>
+                            <div class="grid grid-cols-2 gap-3">
+                                <button onclick="navigateToDetail(${item.id})" class="py-2.5 bg-brand-light hover:bg-brand-border text-brand-dark font-medium rounded-xl text-xs transition-all">選擇規格</button>
+                                <button onclick="navigateToDetail(${item.id})" class="py-2.5 bg-brand-primary hover:bg-brand-dark text-white font-medium rounded-xl text-xs transition-all">加入購物車</button>
+                            </div>
+                        </div>
+                    </div>
+                `;
+                container.appendChild(card);
+            });
+        }
+
+        function navigateToDetail(productId) {
+            const product = productsDatabase.find(p => p.id === productId);
+            if (!product) return;
+
+            currentDetailProduct = product;
+            currentDetailSpec = 'bag';
+            currentDetailQty = 1;
+
+            document.getElementById('detail-breadcrumb-active').innerText = product.name;
+            document.getElementById('detail-image-box').innerHTML = `<img src="${product.imgCode}" class="w-full h-full object-contain">`;
+            document.getElementById('detail-title').innerText = product.name;
+            document.getElementById('detail-summary').innerText = product.summary;
+            document.getElementById('detail-qty-input').innerText = currentDetailQty;
+            document.getElementById('detail-category-badge').innerText = product.category === 'joint' ? '🦴 關節照護系列' : '🛡️ 離胺酸加強系列';
+
+            updateDetailPriceAndSpecDOM();
+
+            document.getElementById('detail-add-cart-btn').onclick = () => addToCartCustomQty(product.id, currentDetailSpec, currentDetailQty);
+            document.getElementById('detail-checkout-now-btn').onclick = () => checkoutImmediately(product.id, currentDetailSpec, currentDetailQty);
+
+            switchPage('product-detail');
+        }
+
+        function changeDetailSpec(spec) {
+            currentDetailSpec = spec;
+            updateDetailPriceAndSpecDOM();
+        }
+
+        function updateDetailPriceAndSpecDOM() {
+            if (!currentDetailProduct) return;
+            const price = currentDetailProduct.prices[currentDetailSpec];
+            document.getElementById('detail-price').innerText = `NT$ ${price}`;
+
+            const bagBtn = document.getElementById('spec-btn-bag');
+            const canBtn = document.getElementById('spec-btn-can');
+
+            if (currentDetailSpec === 'bag') {
+                bagBtn.className = "flex-1 py-3 px-4 rounded-xl border-2 border-brand-primary bg-brand-primary/5 text-left transition-all duration-200";
+                canBtn.className = "flex-1 py-3 px-4 rounded-xl border-2 border-brand-border bg-white hover:border-brand-muted text-left transition-all duration-200";
+            } else {
+                bagBtn.className = "flex-1 py-3 px-4 rounded-xl border-2 border-brand-border bg-white hover:border-brand-muted text-left transition-all duration-200";
+                canBtn.className = "flex-1 py-3 px-4 rounded-xl border-2 border-brand-primary bg-brand-primary/5 text-left transition-all duration-200";
+            }
+        }
+
+        function adjustDetailPageQty(amount) {
+            currentDetailQty = Math.max(1, currentDetailQty + amount);
+            document.getElementById('detail-qty-input').innerText = currentDetailQty;
+        }
+
+        function addToCartCustomQty(productId, spec, qty) {
+            const product = productsDatabase.find(p => p.id === productId);
+            if (!product) return;
+            const price = product.prices[spec];
+            const specText = spec === 'bag' ? '30g袋裝' : '150g罐裝';
+            const cartItemId = `${productId}-${spec}`;
+
+            const existingItem = cart.find(i => i.cartItemId === cartItemId);
+            if (existingItem) existingItem.quantity += qty;
+            else cart.push({ cartItemId: cartItemId, id: product.id, name: `${product.name} (${specText})`, price: price, imgCode: product.imgCode, quantity: qty });
+            
+            updateCartDOM();
+            triggerToast(`已將 ${qty} 個「${product.name} (${specText})」加入購物車`);
+        }
+
+        function checkoutImmediately(productId, spec, qty) {
+            const cartItemId = `${productId}-${spec}`;
+            cart = cart.filter(i => i.cartItemId !== cartItemId);
+            addToCartCustomQty(productId, spec, qty);
+            toggleCart(true);
+        }
+
+        function triggerToast(message, icon = '✨') {
+            const toast = document.getElementById('toast');
+            document.getElementById('toast-text').innerText = message;
+            document.getElementById('toast-icon').innerText = icon;
+            toast.classList.remove('-translate-y-24', 'opacity-0');
+            toast.classList.add('translate-y-0', 'opacity-100');
+            setTimeout(() => {
+                toast.classList.remove('translate-y-0', 'opacity-100');
+                toast.classList.add('-translate-y-24', 'opacity-0');
+            }, 2500);
+        }
+
+        function toggleCart(show) {
+            const drawer = document.getElementById('cart-drawer');
+            const overlay = document.getElementById('cart-drawer-overlay');
+            if (show) {
+                drawer.classList.remove('-right-full', 'md:-right-[450px]');
+                drawer.classList.add('right-0');
+                overlay.classList.remove('opacity-0', 'pointer-events-none');
+                overlay.classList.add('opacity-100', 'pointer-events-auto');
+            } else {
+                drawer.classList.add('-right-full', 'md:-right-[450px]');
+                drawer.classList.remove('right-0');
+                overlay.classList.add('opacity-0', 'pointer-events-none');
+            }
+        }
+
+        function adjustQty(cartItemId, amount) {
+            const item = cart.find(i => i.cartItemId === cartItemId);
+            if (!item) return;
+            item.quantity += amount;
+            if (item.quantity <= 0) cart = cart.filter(i => i.cartItemId === cartItemId);
+            updateCartDOM();
+        }
+
+        function removeItem(cartItemId) {
+            cart = cart.filter(i => i.cartItemId !== cartItemId);
+            updateCartDOM();
+            triggerToast("商品已自購物車中移除", "🗑️");
+        }
+
+        function updateCartDOM() {
+            const countBadge = document.getElementById('cart-count');
+            const itemsContainer = document.getElementById('cart-items-container');
+            const totalSpan = document.getElementById('cart-total');
+            
+            countBadge.innerText = cart.reduce((acc, item) => acc + item.quantity, 0);
+            itemsContainer.innerHTML = '';
+
+            if (cart.length === 0) {
+                itemsContainer.innerHTML = `<div class="h-64 flex flex-col items-center justify-center text-brand-muted text-sm"><span class="text-4xl mb-2">🛒</span>購物車目前空空如也</div>`;
+                totalSpan.innerText = "NT$ 0";
+                return;
+            }
+
+            let sum = 0;
+            cart.forEach(item => {
+                sum += item.price * item.quantity;
+                const div = document.createElement('div');
+                div.className = "flex gap-4 items-center pb-4 border-b border-brand-border/60";
+                div.innerHTML = `
+                    <div class="bg-white w-14 h-14 rounded-xl flex items-center justify-center flex-shrink-0 overflow-hidden border border-brand-border p-1">
+                        <img src="${item.imgCode}" class="w-full h-full object-contain">
+                    </div>
+                    <div class="flex-grow">
+                        <h4 class="text-xs font-bold text-brand-dark">${item.name}</h4>
+                        <div class="text-xs text-brand-primary font-medium mt-0.5">NT$ ${item.price}</div>
+                        <div class="flex items-center justify-between mt-2">
+                            <div class="flex items-center border border-brand-border rounded bg-brand-light">
+                                <button onclick="adjustQty('${item.cartItemId}', -1)" class="px-2 py-0.5 text-xs">-</button>
+                                <span class="px-2 text-xs font-semibold">${item.quantity}</span>
+                                <button onclick="adjustQty('${item.cartItemId}', 1)" class="px-2 py-0.5 text-xs">+</button>
+                            </div>
+                            <button onclick="removeItem('${item.cartItemId}')" class="text-red-500 text-xs">移除</button>
+                        </div>
+                    </div>
+                `;
+                itemsContainer.appendChild(div);
+            });
+            totalSpan.innerText = `NT$ ${sum}`;
+        }
+
+        // 金流與留言控制邏輯
+        function checkoutCart() {
+            if (cart.length === 0) return;
+            triggerToast("金流安全連線中...", "🔒");
+            setTimeout(() => {
+                cart = [];
+                updateCartDOM();
+                toggleCart(false);
+                triggerToast("【模擬結帳成功】感謝您的支持！", "🎉");
+            }, 1800);
+        }
+
+        function toggleMobileDrawer(show) {
+            const drawer = document.getElementById('mobile-drawer');
+            const overlay = document.getElementById('mobile-drawer-overlay');
+            if (show) {
+                drawer.classList.remove('-left-80');
+                drawer.classList.add('left-0');
+                overlay.classList.remove('opacity-0', 'pointer-events-none');
+                overlay.classList.add('opacity-100', 'pointer-events-auto');
+            } else {
+                drawer.classList.add('-left-80');
+                drawer.classList.remove('left-0');
+                overlay.classList.add('opacity-0', 'pointer-events-none');
+            }
+        }
+
+        function handleContactSubmit(event) {
+            event.preventDefault();
+            triggerToast("訊息已成功送出！我們將儘速回覆您", "✉️");
+            event.target.reset();
+        }
+
+        window.onload = function() {
+            filterProducts('all');
+            updateCartDOM();
+        }
+    </script>
+</body>
+</html>
