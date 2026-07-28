@@ -5,10 +5,10 @@ const LINE_LOGIN_CHANNEL_ID = "2010849391"; // not secret — same as embedded i
 export const Route = createFileRoute("/")({
   head: () => ({
     meta: [
-      { title: "Health App" },
+      { title: "DaHuaLab Healthy app" },
       {
         name: "description",
-        content: "Health App",
+        content: "DaHuaLab Healthy app",
       },
     ],
   }),
@@ -24,7 +24,7 @@ function Index() {
   return (
     <div className="flex min-h-screen flex-col items-center justify-center gap-4 bg-background px-4">
       <div className="max-w-md text-center">
-        <h1 className="text-3xl font-bold text-foreground">Health App</h1>
+        <h1 className="text-3xl font-bold text-foreground">DaHuaLab Healthy app</h1>
         <p className="mt-2 text-sm text-muted-foreground">
           UI base carried over from dhl1688-vercel. Pages to be built.
         </p>
