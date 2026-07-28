@@ -1,40 +1,51 @@
 import { createFileRoute } from "@tanstack/react-router";
-
-const LINE_LOGIN_CHANNEL_ID = "2010849391"; // not secret — same as embedded in the LIFF ID
+import dahuaCss from "@/styles/dahua.css?url";
+import { Navbar } from "@/components/dahua/Navbar";
+import { HeroSection } from "@/components/dahua/HeroSection";
+import { ClinicSection } from "@/components/dahua/ClinicSection";
+import { CheckupsSection } from "@/components/dahua/CheckupsSection";
+import { GeneSection } from "@/components/dahua/GeneSection";
+import { SpecializedSection } from "@/components/dahua/SpecializedSection";
+import { ComparisonTable } from "@/components/dahua/ComparisonTable";
+import { ProductsSection } from "@/components/dahua/ProductsSection";
+import { BookingSection } from "@/components/dahua/BookingSection";
+import { Footer } from "@/components/dahua/Footer";
+import { SocialFab } from "@/components/dahua/SocialFab";
 
 export const Route = createFileRoute("/")({
   head: () => ({
     meta: [
-      { title: "DaHuaLab Healthy app" },
+      { title: "大華醫事檢驗所 - 精準醫學，數據實證" },
       {
         name: "description",
-        content: "DaHuaLab Healthy app",
+        content:
+          "大華醫事檢驗所深耕預防醫學，提供健康檢查、基因檢測、過敏原檢測與專業諮詢，地址：彰化市崙平南路 532 號。",
+      },
+      { property: "og:title", content: "大華醫事檢驗所 - 精準醫學，數據實證" },
+      {
+        property: "og:description",
+        content: "健康檢查、基因檢測、過敏原檢測與專業諮詢，數據實證的預防醫學夥伴。",
       },
     ],
+    links: [{ rel: "stylesheet", href: dahuaCss }],
   }),
   component: Index,
 });
 
 function Index() {
-  const redirectUri = encodeURIComponent(
-    `${typeof window !== "undefined" ? window.location.origin : "https://dahua-health-app.vercel.app"}/auth/line/callback`,
-  );
-  const lineLoginUrl = `https://access.line.me/oauth2/v2.1/authorize?response_type=code&client_id=${LINE_LOGIN_CHANNEL_ID}&redirect_uri=${redirectUri}&state=web&scope=profile%20openid`;
-
   return (
-    <div className="flex min-h-screen flex-col items-center justify-center gap-4 bg-background px-4">
-      <div className="max-w-md text-center">
-        <h1 className="text-3xl font-bold text-foreground">DaHuaLab Healthy app</h1>
-        <p className="mt-2 text-sm text-muted-foreground">
-          UI base carried over from dhl1688-vercel. Pages to be built.
-        </p>
-      </div>
-      <a
-        href={lineLoginUrl}
-        className="inline-flex items-center justify-center rounded-md bg-[#06C755] px-4 py-2 text-sm font-medium text-white transition-colors hover:bg-[#05b34c]"
-      >
-        使用 LINE 登入 / 加入會員
-      </a>
-    </div>
+    <>
+      <Navbar />
+      <HeroSection />
+      <ClinicSection />
+      <CheckupsSection />
+      <GeneSection />
+      <SpecializedSection />
+      <ComparisonTable />
+      <ProductsSection />
+      <BookingSection />
+      <Footer />
+      <SocialFab />
+    </>
   );
 }
