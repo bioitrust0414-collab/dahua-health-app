@@ -17,6 +17,7 @@ import {
   getLiffIdToken,
   isLiffConfigured,
 } from "@/lib/liffClient";
+import { setStoredProfileId } from "@/lib/memberSession";
 
 // 還沒有 LIFF ID（等大華官方帳號那邊協調好 LINE Developers 權限、建好 LIFF app
 // 之後才會有）時，先用固定的測試 profile id 示範「會員資料 + 報告查詢」怎麼串起來。
@@ -110,7 +111,13 @@ function useLineProfileId(
   );
 
   useEffect(() => {
-    if (webProfileId) return; // already have a real profile from the web login redirect
+    if (webProfileId) {
+      // Real profile handed to us by the web LINE Login redirect — remember it
+      // so a future visit (e.g. clicking the LINE icon again) skips straight
+      // to the member area instead of the add-friend flow.
+      setStoredProfileId(webProfileId);
+      return;
+    }
     if (!isLiffConfigured()) return; // stay on the demo profile
 
     let cancelled = false;
@@ -119,7 +126,10 @@ function useLineProfileId(
         await ensureLiffLogin();
         const idToken = getLiffIdToken();
         const { profileId } = await verifyLineLogin({ data: idToken });
-        if (!cancelled) setState({ profileId, source: "line", error: null });
+        if (!cancelled) {
+          setStoredProfileId(profileId);
+          setState({ profileId, source: "line", error: null });
+        }
       } catch (error) {
         if (!cancelled) {
           setState((prev) => ({

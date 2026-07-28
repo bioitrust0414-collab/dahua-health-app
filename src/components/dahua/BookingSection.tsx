@@ -1,5 +1,7 @@
-import { useState, type FormEvent } from "react";
+import { useEffect, useState, type FormEvent } from "react";
+import { Link } from "@tanstack/react-router";
 import { bookingOptions } from "@/data/dahua";
+import { getStoredProfileId } from "@/lib/memberSession";
 import { SectionHeader } from "./SectionHeader";
 
 const contacts = [
@@ -34,6 +36,11 @@ export function BookingSection() {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [form, setForm] = useState({ name: "", phone: "", pkg: "", note: "" });
+  const [isMember, setIsMember] = useState(false);
+
+  useEffect(() => {
+    setIsMember(Boolean(getStoredProfileId()));
+  }, []);
 
   async function handleSubmit(e: FormEvent<HTMLFormElement>) {
     e.preventDefault();
@@ -63,20 +70,37 @@ export function BookingSection() {
           desc="歡迎透過以下方式與我們聯絡，或直接填寫預約表單。"
         />
         <div className="contact-grid">
-          {contacts.map((c) => (
-            <div key={c.title} className="contact-card">
-              <div className="contact-icon">{c.icon}</div>
-              <div className="contact-title">{c.title}</div>
-              <div className="contact-info">{c.info}</div>
-              <a
-                href={c.href}
-                className="contact-link"
-                {...(c.external ? { target: "_blank", rel: "noreferrer" } : {})}
-              >
-                {c.cta}
-              </a>
-            </div>
-          ))}
+          {contacts.map((c) => {
+            // 已經登入過的會員點 LINE 官方帳號卡片，直接進會員專區看報告，
+            // 不用再走一次加好友的 QR code 流程。
+            if (c.title === "LINE 官方帳號" && isMember) {
+              return (
+                <div key={c.title} className="contact-card">
+                  <div className="contact-icon">{c.icon}</div>
+                  <div className="contact-title">{c.title}</div>
+                  <div className="contact-info">{c.info}</div>
+                  <Link to="/member" className="contact-link">
+                    前往會員專區 →
+                  </Link>
+                </div>
+              );
+            }
+
+            return (
+              <div key={c.title} className="contact-card">
+                <div className="contact-icon">{c.icon}</div>
+                <div className="contact-title">{c.title}</div>
+                <div className="contact-info">{c.info}</div>
+                <a
+                  href={c.href}
+                  className="contact-link"
+                  {...(c.external ? { target: "_blank", rel: "noreferrer" } : {})}
+                >
+                  {c.cta}
+                </a>
+              </div>
+            );
+          })}
         </div>
         <div className="booking-form-container">
           <h3 className="form-title">預約專業諮詢</h3>

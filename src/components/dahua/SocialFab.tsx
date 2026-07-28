@@ -1,4 +1,14 @@
+import { useEffect, useState } from "react";
+import { Link } from "@tanstack/react-router";
+import { getStoredProfileId } from "@/lib/memberSession";
+
 export function SocialFab() {
+  const [isMember, setIsMember] = useState(false);
+
+  useEffect(() => {
+    setIsMember(Boolean(getStoredProfileId()));
+  }, []);
+
   return (
     <div className="social-fab">
       <a
@@ -9,14 +19,20 @@ export function SocialFab() {
       >
         f
       </a>
-      <a
-        href="https://line.me/ti/p/@932cczax"
-        target="_blank"
-        rel="noreferrer"
-        className="social-btn line"
-      >
-        LINE
-      </a>
+      {isMember ? (
+        <Link to="/member" className="social-btn line">
+          LINE
+        </Link>
+      ) : (
+        <a
+          href="https://line.me/ti/p/@932cczax"
+          target="_blank"
+          rel="noreferrer"
+          className="social-btn line"
+        >
+          LINE
+        </a>
+      )}
     </div>
   );
 }
