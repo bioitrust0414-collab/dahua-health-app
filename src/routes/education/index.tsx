@@ -15,7 +15,7 @@ function EducationPage() {
     <div className="container mx-auto px-4 py-8">
       <h1 className="text-3xl font-bold mb-2">衛教知識</h1>
       <p className="text-muted-foreground mb-8">
-        精選營養科普，陪你建立科學健康觀念（{data.released_episodes}/{data.total_episodes} 期已上線）
+        精選營養科普，陪你建立科學健康觀念
       </p>
 
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">

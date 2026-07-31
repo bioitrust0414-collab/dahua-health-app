@@ -1,5 +1,4 @@
 import { createFileRoute, notFound } from '@tanstack/react-router'
-import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
 import type { Article, CardText } from '@/types/content'
 
 // Bundles all episode article.json files at build time — no runtime fetch/fs needed.
@@ -21,7 +20,7 @@ export const Route = createFileRoute('/education/$episodeId')({
   },
 })
 
-function ChannelContent({
+function ArticleBody({
   text,
   cards,
   episodeId,
@@ -60,29 +59,7 @@ function EpisodeDetailPage() {
     <div className="container mx-auto px-4 py-8 max-w-3xl">
       <h1 className="text-2xl font-bold mb-1">{article.title}</h1>
       <p className="text-muted-foreground mb-6">{article.hook}</p>
-
-      <Tabs defaultValue="web" className="w-full">
-        <TabsList className="grid w-full grid-cols-3">
-          <TabsTrigger value="web">網站文案</TabsTrigger>
-          <TabsTrigger value="fb">FB 長文</TabsTrigger>
-          <TabsTrigger value="ig">IG 短文</TabsTrigger>
-        </TabsList>
-
-        <TabsContent value="web" className="mt-6">
-          <ChannelContent text={article.web_copy} cards={article.cards} episodeId={episodeId} />
-        </TabsContent>
-
-        <TabsContent value="fb" className="mt-6">
-          <ChannelContent text={article.fb_long} cards={article.cards} episodeId={episodeId} />
-        </TabsContent>
-
-        <TabsContent value="ig" className="mt-6">
-          <ChannelContent text={article.ig_short} cards={article.cards} episodeId={episodeId} />
-          {article.hashtags && (
-            <p className="mt-4 text-primary text-sm">{article.hashtags}</p>
-          )}
-        </TabsContent>
-      </Tabs>
+      <ArticleBody text={article.fb_long} cards={article.cards} episodeId={episodeId} />
     </div>
   )
 }
