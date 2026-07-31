@@ -5,6 +5,7 @@ const links = [
   { href: "#gene", label: "基因檢測" },
   { href: "#specialized", label: "專項檢驗" },
   { href: "#products", label: "保健產品" },
+  { href: "/education", label: "衛教知識" },
   { href: "/mal1688", label: "專業複合鈣" },
   { href: "/heychew1688/index.html", label: "寵物零嘴" },
   { href: "/member", label: "會員登入" },
