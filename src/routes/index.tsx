@@ -8,6 +8,7 @@ import { GeneSection } from "@/components/dahua/GeneSection";
 import { SpecializedSection } from "@/components/dahua/SpecializedSection";
 import { ComparisonTable } from "@/components/dahua/ComparisonTable";
 import { ProductsSection } from "@/components/dahua/ProductsSection";
+import { EducationSection } from "@/components/dahua/EducationSection";
 import { BookingSection } from "@/components/dahua/BookingSection";
 import { Footer } from "@/components/dahua/Footer";
 import { SocialFab } from "@/components/dahua/SocialFab";
@@ -43,6 +44,7 @@ function Index() {
       <SpecializedSection />
       <ComparisonTable />
       <ProductsSection />
+      <EducationSection />
       <BookingSection />
       <Footer />
       <SocialFab />
