@@ -12,7 +12,7 @@ export function EducationSection() {
         <SectionHeader
           badge="Health Education"
           title="衛教知識"
-          desc={`營養與健康的科普內容，幫助你在日常中做出有依據的健康選擇（${data.released_episodes}/${data.total_episodes} 期已上線）。`}
+          desc="營養與健康的科普內容，幫助你在日常中做出有依據的健康選擇。"
         />
         <div className="products-grid">
           {released.map((ep) => (
