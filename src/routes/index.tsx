@@ -12,6 +12,7 @@ import { EducationSection } from "@/components/dahua/EducationSection";
 import { BookingSection } from "@/components/dahua/BookingSection";
 import { Footer } from "@/components/dahua/Footer";
 import { SocialFab } from "@/components/dahua/SocialFab";
+import { MemberCta } from "@/components/home/MemberCta"; // ✅ 新增
 
 export const Route = createFileRoute("/")({
   head: () => ({
@@ -36,7 +37,6 @@ export const Route = createFileRoute("/")({
 function Index() {
   return (
     <>
-      <Navbar />
       <HeroSection />
       <ClinicSection />
       <CheckupsSection />
@@ -46,6 +46,7 @@ function Index() {
       <ProductsSection />
       <EducationSection />
       <BookingSection />
+      <MemberCta /> {/* ✅ 新增：會員召喚區塊 */}
       <Footer />
       <SocialFab />
     </>
